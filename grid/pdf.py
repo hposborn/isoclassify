@@ -7,68 +7,68 @@ import time
 from scipy.interpolate import interp1d
 
 def binpdf(x,y,step,iname,dustmodel):
-	xax = np.arange(np.min(x),np.max(x),step)
-        
+        xax = np.arange(np.min(x),np.max(x),step)
+
         if fnmatch.fnmatch(iname,'*age*'):
-		#xax = np.arange(0.,14.5,0.25)
+                #xax = np.arange(0.,14.5,0.25)
                 xax = np.arange(0.125,14.125,0.25)
                 step=0.25
-		
-	if fnmatch.fnmatch(iname,'*feh*'):
-		#xax = np.arange(-2.05,0.55,0.051)
+
+        if fnmatch.fnmatch(iname,'*feh*'):
+                #xax = np.arange(-2.05,0.55,0.051)
                 xax = np.arange(-2.025,0.525,0.05)
                 step=0.05
 
-	
+
         if ( (dustmodel == 0) & (fnmatch.fnmatch(iname,'*avs*'))):
                 grid=np.unique(x)
                 spacing=grid[1]-grid[0]
                 xax = np.arange(grid[0]-spacing/4.,grid[len(grid)-1]+spacing/4.,spacing)
                 step=spacing
-    
-	yax = np.zeros(len(xax))
-		
-	digitized = np.digitize(x, xax)
-	yax = [y[digitized == i].sum() for i in range(1, len(xax)+1)]
+
+        yax = np.zeros(len(xax))
+
+        digitized = np.digitize(x, xax)
+        yax = [y[digitized == i].sum() for i in range(1, len(xax)+1)]
 
         '''
-	for r in range(0,len(xax)-1):
-		ix = np.where((x > xax[r]) & (x <= xax[r+1]))
-		yax[r] = np.sum(y[ix[0]])
-        
+        for r in range(0,len(xax)-1):
+                ix = np.where((x > xax[r]) & (x <= xax[r+1]))
+                yax[r] = np.sum(y[ix[0]])
+
         plt.clf()
 
-	plt.plot(xax,yax2/np.max(yax2))
-	plt.plot(xax,yax/np.max(yax))
-	pdb.set_trace()
+        plt.plot(xax,yax2/np.max(yax2))
+        plt.plot(xax,yax/np.max(yax))
+        pdb.set_trace()
         '''
 
-	xax= xax+step/2.
+        xax= xax+step/2.
         #yax = gaussian_filter(yax,1.5)
         #if fnmatch.fnmatch(iname,'*avs*'):
         #         pdb.set_trace()
         #pdb.set_trace()
-	yax = yax/np.sum(yax)
-	return xax,yax
+        yax = yax/np.sum(yax)
+        return xax,yax
 
 
 def getstat(xax,yax):
-	cdf = np.cumsum(yax)
-        ppf = interp1d(cdf,xax) # percent point function 
+        cdf = np.hstack((0,np.cumsum(yax)))
+        ppf = interp1d(cdf,np.hstack((xax[0]-np.nanmedian(np.diff(xax)),xax))) # percent point function
         p16, med, p84 = ppf([0.16,0.50,0.84])
         emed1  = med - p16
         emed2  = p84 - med
         return med,emed2,emed1
-	
-def getpdf(x,y,step,fixed,name,dustmodel):
-	if fixed == 0:
-		pos=np.argmax(y)
-		steps=x[pos]*step
-	else:
-		steps=step
 
-	xax,yax = binpdf(x=x,y=y,step=steps,iname=name,dustmodel=dustmodel)
-	med,emed1,emed2 = getstat(xax,yax)
+def getpdf(x,y,step,fixed,name,dustmodel):
+        if fixed == 0:
+                pos=np.argmax(y)
+                steps=x[pos]*step
+        else:
+                steps=step
+
+        xax,yax = binpdf(x=x,y=y,step=steps,iname=name,dustmodel=dustmodel)
+        med,emed1,emed2 = getstat(xax,yax)
 
         if ( (dustmodel == 0) & (fnmatch.fnmatch(name,'*avs*'))):
                 return xax,yax,med,emed1,emed2
@@ -82,13 +82,13 @@ def getpdf(x,y,step,fixed,name,dustmodel):
                 steps=newstep
 
         xax,yax = binpdf(x=x,y=y,step=steps,iname=name,dustmodel=dustmodel)
-	med,emed1,emed2 = getstat(xax,yax)
+        med,emed1,emed2 = getstat(xax,yax)
 
         if fnmatch.fnmatch(name,'*rho*'):
                 xax=10**xax
                 #yax=10**yax
                 med,emed1,emed2 = getstat(xax,yax)
-                
+
         if fnmatch.fnmatch(name,'*lum*'):
                 xax=10**xax
                 #yax=10**yax
@@ -99,7 +99,5 @@ def getpdf(x,y,step,fixed,name,dustmodel):
         #        plt.plot(xax,np.cumsum(yax))
         #        plt.subplot(7,2,plot+1)
         #        plt.plot(xax,yax)
-                
-	return xax,yax,med,emed1,emed2
 
-        
+        return xax,yax,med,emed1,emed2

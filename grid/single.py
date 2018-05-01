@@ -1,7 +1,7 @@
 #%matplotlib inline
 import numpy as np
 import matplotlib.pyplot as plt
-from classify_grid import *
+from .classify_grid import *
 import os, ebf
 from astropy.io import ascii
 import time
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     #dustmodel = mwdust.Combined15()
 
     x=obsdata()
-    
+
     x.addspec([5801.,-99.0,-0.07],[80.,0.0,0.1])
     x.addseismo([1240.,63.5],[70.,1.5])
     x.addjhk([10.369,10.07,10.025],[0.022,0.018,0.019])

@@ -1,0 +1,6 @@
+* Converting "prob" calculations to use log prob (avoiding python overflow with small probabilities)
+* forcing "plot" to return plt.figure object
+* allowing fewer "ok" colour models to pass through, if there are too few to make a good model (arbitrarily 25). eg, if JHK/griz colours leave only 4 models, it will take any model where at least (n-1) colours are ok, or (n-2), etc.
+* some residual debuggin print statements (sorry)
+* python 3 compatible, although you will need to not import/use ebf.py (which is hopelessly old and stuck in py2.7). I used py2.7/ebf to get a pickle version of the MIST isochrones, and import that with py3.
+* removed some pdb.set_trace() lines because theyre super annoying.

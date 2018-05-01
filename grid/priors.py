@@ -19,7 +19,7 @@ def avprior(av_in,data,i,dust,dist):
         equ = ephem.Equatorial(data['ra'][i]*np.pi/180., data['dec'][i]*np.pi/180., \
                                                epoch=ephem.J2000)
         gal = ephem.Galactic(equ)
-        
+
         pos=np.argmin(np.sqrt( ((gal.lon*180./np.pi)-dust['lon'])**2 + \
                                                (gal.lat*180./np.pi-dust['lat'])**2))
         ebv=dust['vals'][pos,:,:]
@@ -43,7 +43,7 @@ def getav(data,i,dust,dist):
         equ = ephem.Equatorial(data['ra'][i]*np.pi/180., data['dec'][i]*np.pi/180., \
                                                epoch=ephem.J2000)
         gal = ephem.Galactic(equ)
-        
+
         pos=np.argmin(np.sqrt( ((gal.lon*180./np.pi)-dust['lon'])**2 + \
                                                (gal.lat*180./np.pi-dust['lat'])**2))
         ebv=dust['vals'][pos,:,:]

@@ -5,7 +5,7 @@ from astropy.io import ascii
 import ephem
 import pdb
 import numpy as np
-#import mwdust
+import mwdust
 import time
 import copy
 
