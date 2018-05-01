@@ -1,6 +1,6 @@
-from pdf import *
-from priors import *
-from plot import *
+from .pdf import *
+from .priors import *
+from .plot import *
 from astropy.io import ascii
 import ephem
 import pdb
@@ -13,14 +13,14 @@ class obsdata():
     def __init__(self):
         self.plx = -99.
         self.plxe = -99.
-    
+
         self.teff = -99.
         self.teffe = -99.
         self.logg = -99.
         self.logge = -99.
         self.feh = -99.
         self.fehe = -99.
-        
+
         self.bmag = -99.
         self.bmage = -99.
         self.vmag = -99.
@@ -45,12 +45,12 @@ class obsdata():
         self.hmage = -99.
         self.kmag = -99.
         self.kmage = -99.
-        
+
         self.numax = -99.
         self.numaxe = -99.
         self.dnu = -99.
         self.dnue = -99.
-                   
+
     def addspec(self,value,sigma):
         self.teff = value[0]
         self.teffe = sigma[0]
@@ -58,7 +58,7 @@ class obsdata():
         self.logge = sigma[1]
         self.feh = value[2]
         self.fehe = sigma[2]
-               
+
     def addbv(self,value,sigma):
         self.bmag = value[0]
         self.bmage = sigma[0]
@@ -70,7 +70,7 @@ class obsdata():
         self.btmage = sigma[0]
         self.vtmag = value[1]
         self.vtmage = sigma[1]
-        
+
     def addgriz(self,value,sigma):
         self.gmag = value[0]
         self.gmage = sigma[0]
@@ -80,7 +80,7 @@ class obsdata():
         self.image = sigma[2]
         self.zmag = value[3]
         self.zmage = sigma[3]
-        
+
     def addjhk(self,value,sigma):
         self.jmag = value[0]
         self.jmage = sigma[0]
@@ -88,21 +88,31 @@ class obsdata():
         self.hmage = sigma[1]
         self.kmag = value[2]
         self.kmage = sigma[2]
-        
+
     def addplx(self,value,sigma):
         self.plx = value
         self.plxe = sigma
-        
+
     def addseismo(self,value,sigma):
         self.numax = value[0]
         self.numaxe = sigma[0]
         self.dnu = value[1]
         self.dnue = sigma[1]
-	
+
     def addcoords(self,value1,value2):
         self.ra = value1
         self.dec = value2
 
+    def keylist():
+        return ['plx','lxe','teff','teffe','logg','logge','feh','fehe','bmag','bmage',
+                'vmag','vmage','btmag','btmage','vtmag','vtmage','gmag','gmage',
+                'rmag','rmage','imag','image','zmag','zmage','jmag','jmage',
+                'hmag','hmage','kmag','kmage','numax','numaxe','dnu','dnue']
+    def to_pandas():
+        ser=pd.Series()
+        for col in self.keylist():
+            ser[col]=getattr(self,col)
+        return ser
 class resdata():
     def __init__(self):
         self.teff = 0.
@@ -155,6 +165,17 @@ class resdata():
         self.disem = 0.
         self.dispx = 0.
         self.dispy = 0.
+    def keylist():
+        return ['teff','teffep','teffem','teffpx','teffpy','logg','loggep','loggem','loggpx','loggpy',
+                'feh','fehep','fehem','fehpx','fehpy','rad','radep','radem','radpx','radpy',
+                'mass','massep','massem','masspx','masspy','rho','rhoep','rhoem','rhopx','rhopy',
+                'lum','lumep','lumem','lumpx','lumpy','avs','avsep','avsem','avspx','avspy',
+                'dis','disep','disem','dispx','dispy']
+    def to_pandas():
+        ser=pd.Series()
+        for col in self.keylist():
+            ser[col]=getattr(self,col)
+        return ser
 
 class extinction():
     def __init__(self):
@@ -189,7 +210,7 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
 
     ## extinction coefficients
     extfactors=extinction()
-    
+
     ## class containing output results
     result = resdata()
 
@@ -197,7 +218,7 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
     bvcol=input.bmag-input.vmag
     bvtcol=input.btmag-input.vtmag
     grcol=input.gmag-input.rmag
-    ricol=input.rmag-input.imag 
+    ricol=input.rmag-input.imag
     izcol=input.imag-input.zmag
     jhcol=input.jmag-input.hmag
     hkcol=input.hmag-input.kmag
@@ -213,6 +234,7 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
 
     # determine apparent mag to use for distance estimation. K>J>g>Vt>V
     map=-99.
+    mape=None
     if (input.vmag > -99.):
         map=input.vmag
         mape=input.vmage
@@ -223,14 +245,14 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
         map=input.vtmag
         mape=input.vtmage
         model_mabs=model['vtmag']
-	ext=extfactors.avt
+    ext=extfactors.avt
 
     if (input.gmag > -99.):
         map=input.gmag
         mape=input.gmage
-        model_mabs=model['gmag']   
+        model_mabs=model['gmag']
         ext=extfactors.ag
-	
+
     if (input.jmag > -99.):
         map=input.jmag
         mape=input.jmage
@@ -242,9 +264,9 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
         mape=input.kmage
         model_mabs=model['kmag']
         ext=extfactors.ak
-        
+
     # absolute magnitude
-    if (input.plx > -99.):
+    if (input.plx > -99.) and mape is not None:
         mabs = -5.*np.log10(1./input.plx)+map+5.
         mabse = np.sqrt((-5./(input.plx*np.log(10)))**2*input.plxe**2+mape**2+bcerr**2.)
     else:
@@ -254,39 +276,39 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
     # pre-select model grid; first only using reddening-independent quantities
     sig=4.
     um=np.arange(0,len(model['teff']),1)
-        
+
     if (input.teff > -99.):
         ut=np.where((model['teff'] > input.teff-sig*input.teffe) & \
         (model['teff'] < input.teff+sig*input.teffe))[0]
         um=np.intersect1d(um,ut)
-        print 'teff',len(um)
+        print('teff',len(um))
 
     if (input.dnu > 0.):
         model_dnu = dnusun*model['fdnu']*np.sqrt(10**model['rho'])
         ut=np.where((model_dnu > input.dnu-sig*input.dnue) & \
         (model_dnu < input.dnu+sig*input.dnue))[0]
         um=np.intersect1d(um,ut)
-        print 'dnu',len(um)
+        print('dnu',len(um))
 
     if (input.numax > 0.):
         model_numax = numaxsun*(10**model['logg']/gsun)*(model['teff']/teffsun)**(-0.5)
         ut=np.where((model_numax > input.numax-sig*input.numaxe) & \
         (model_numax < input.numax+sig*input.numaxe))[0]
         um=np.intersect1d(um,ut)
-        print 'numax',len(um)
-        
+        print('numax',len(um))
+
     if (input.logg > -99.):
         ut=np.where((model['logg'] > input.logg-sig*input.logge) & \
         (model['logg'] < input.logg+sig*input.logge))[0]
         um=np.intersect1d(um,ut)
-        
+
     if (input.feh > -99.):
         ut=np.where((model['feh'] > input.feh-sig*input.fehe) & \
         (model['feh'] < input.feh+sig*input.fehe))[0]
         um=np.intersect1d(um,ut)
-        print 'feh',len(um)
-               
-    print 'number of models used within non-phot obsconstraints:',len(um)
+        print('feh',len(um))
+
+    print('number of models used within non-phot obsconstraints:',len(um))
     # bail if there are not enough good models
     if (len(um) < 10):
         return result
@@ -299,147 +321,162 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
             #avs = np.linspace(-0.1,1.0,41.)
             avs = np.arange(-0.3,1.0,0.01)
             #avs = np.arange(-0.3,1.0,0.1)
-            
+
             # user-specified reddening
             if (useav > -99.):
                 avs = np.zeros(1)+useav
-                
+
             mod = reddening(model,um,avs,extfactors)
 
         # otherwise, just redden each model according to the provided map
         else:
-	    mod=reddening_map(model,model_mabs,map,ext,dustmodel,um,input,extfactors)
-        
+            mod=reddening_map(model,model_mabs,map,ext,dustmodel,um,input,extfactors)
+
         # photometry to use for distance
         if (input.vmag > -99.):
             mod_mabs=mod['vmag']
         if (input.vtmag > -99.):
             mod_mabs=mod['vtmag']
-	if (input.gmag > -99.):
+        if (input.gmag > -99.):
             mod_mabs=mod['gmag']
-	if (input.jmag > -99.):
+        if (input.jmag > -99.):
             mod_mabs=mod['jmag']
         if (input.kmag > -99.):
             mod_mabs=mod['kmag']
-        um = np.arange(0,len(mod['teff']),1)
-	
+        um = np.tile(True,len(mod['teff']))
+
         mod['dis'] = 10**((map-mod_mabs+5.)/5.)
-        print 'number of models incl reddening:',len(um)
+        print('number of models incl reddening:',len(um))
     else:
         mod=model
 
     # next, another model down-select based on reddening-dependent quantities
     # only do this if no spec constraints are available
-    
+
     if (mabs > -99.):
-            ut=np.where((mod_mabs > mabs-sig*mabse) & (mod_mabs < mabs+sig*mabse))[0]
-            um=np.intersect1d(um,ut)
+            ut=(mod_mabs > mabs-sig*mabse)*(mod_mabs < mabs+sig*mabse)
+            um=np.column_stack((um,ut))
     #else:
     #        um = np.arange(0,len(mod['teff']),1)
-    
+
 
     if (input.teff == -99.):
-
+        print("Getting Teff from colours")
         if ((input.bmag > -99.) & (input.vmag > -99.)):
-            ut=np.where((model['bmag']-model['vmag'] > bvcol-sig*bvcole) & \
-                        (model['bmag']-model['vmag'] < bvcol+sig*bvcole))[0]
-            um=np.intersect1d(um,ut)
-            pdb.set_trace()
-            #print 'bv:',len(um)
+            ut=(model['bmag']-model['vmag'] > bvcol-sig*bvcole)*(model['bmag']-model['vmag'] < bvcol+sig*bvcole)
+            um=np.column_stack((um,ut))
+            #pdb.set_trace()
+            print("B-V colour:"+str(bvcol)+"±"+str(bvcole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('bv:',len(um)
         if ((input.btmag > -99.) & (input.vtmag > -99.)):
-            ut=np.where((model['btmag']-model['vtmag'] > bvtcol-sig*bvtcole) & \
-                    (model['btmag']-model['vtmag'] < bvtcol+sig*bvtcole))[0]
-            um=np.intersect1d(um,ut)
-            #print 'btvt:',len(um)
+            ut=(model['btmag']-model['vtmag'] > bvtcol-sig*bvtcole)*\
+                    (model['btmag']-model['vtmag'] < bvtcol+sig*bvtcole)
+            um=np.column_stack((um,ut))
+            print("Bt-Vt colour:"+str(bvtcol)+"±"+str(bvtcole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('btvt:',len(um)
         if ((input.gmag > -99.) & (input.rmag > -99.)):
-            ut=np.where((model['gmag']-model['rmag'] > grcol-sig*grcole) & \
-                    (model['gmag']-model['rmag'] < grcol+sig*grcole))[0]
-            um=np.intersect1d(um,ut)
-            #print 'gr:',len(um)
+            ut=(model['gmag']-model['rmag'] > grcol-sig*grcole)*\
+                    (model['gmag']-model['rmag'] < grcol+sig*grcole)
+            um=np.column_stack((um,ut))
+            print("g-r colour:"+str(grcol)+"±"+str(grcole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('gr:',len(um)
         if ((input.rmag > -99.) & (input.imag > -99.)):
-            ut=np.where((model['rmag']-model['imag'] > ricol-sig*ricole) & \
-                    (model['rmag']-model['imag'] < ricol+sig*ricole))[0]
-            um=np.intersect1d(um,ut)
-            #print 'ri:',len(um)
+            ut=(model['rmag']-model['imag'] > ricol-sig*ricole)*\
+                    (model['rmag']-model['imag'] < ricol+sig*ricole)
+            um=np.column_stack((um,ut))
+            print("r-i colour:"+str(ricol)+"±"+str(ricole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('ri:',len(um)
         if ((input.imag > -99.) & (input.zmag > -99.)):
-            ut=np.where((model['imag']-model['zmag'] > izcol-sig*izcole) & \
-                    (model['imag']-model['zmag'] < izcol+sig*izcole))[0]
-            um=np.intersect1d(um,ut)
-            #print 'iz:',len(um)
+            ut=(model['imag']-model['zmag'] > izcol-sig*izcole)*\
+                    (model['imag']-model['zmag'] < izcol+sig*izcole)
+            um=np.column_stack((um,ut))
+            print("i-z colour:"+str(izcol)+"±"+str(izcole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('iz:',len(um)
         if ((input.jmag > -99.) & (input.hmag > -99.)):
-            ut=np.where((model['jmag']-model['hmag'] > jhcol-sig*jhcole) & \
-                    (model['jmag']-model['hmag'] < jhcol+sig*jhcole))[0]
-            um=np.intersect1d(um,ut)
-            #print 'jh:',len(um)
+            ut=(model['jmag']-model['hmag'] > jhcol-sig*jhcole)*\
+                    (model['jmag']-model['hmag'] < jhcol+sig*jhcole)
+            um=np.column_stack((um,ut))
+            print("J-H colour:"+str(jhcol)+"±"+str(jhcole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('jh:',len(um)
         if ((input.hmag > -99.) & (input.kmag > -99.)):
-            ut=np.where((model['hmag']-model['kmag'] > hkcol-sig*hkcole) & \
-                    (model['hmag']-model['kmag'] < hkcol+sig*hkcole))[0]
-            um=np.intersect1d(um,ut)
-            #print 'hk:',len(um)
+            ut=(model['hmag']-model['kmag'] > hkcol-sig*hkcole)*\
+                    (model['hmag']-model['kmag'] < hkcol+sig*hkcole)
+            um=np.column_stack((um,ut))
+            print("H-K colour:"+str(hkcol)+"±"+str(hkcole)+". ",np.sum(ut)," intersection:",np.sum(um,axis=0))
+            #print('hk:',len(um)
 
-        
+
     #pdb.set_trace()
+    if len(np.shape(um))>1:
+        #Taking the models which fulfil as many colour criteria as possible, without returning zero.
+        for n in np.arange(np.shape(um)[1],0,-1):
+            um_loop=np.where(np.sum(um,axis=1)>=n)[0]
+            if len(um_loop)>25:
+                break
+        um=um_loop
+    else:
+        um=range(len(um))
 
-    print 'number of models after phot constraints:',len(um)
-    print '----'
+    print('number of models after phot constraints:',len(um))
+    print('----')
 
     # bail if there are not enough good models
     if (len(um) < 10):
         return result
-    
+
     # likelihoods
     if ((input.gmag > -99.) & (input.rmag > -99.)):
-        lh_gr = np.exp(-(grcol-(mod['gmag'][um]-mod['rmag'][um]))**2./(2.*grcole**2.))
+        lh_gr = -(grcol-(mod['gmag'][um]-mod['rmag'][um]))**2./(2.*grcole**2.)
     else:
-        lh_gr = np.ones(len(um))
+        lh_gr = np.zeros(len(um))
 
     if ((input.rmag > -99.) & (input.imag > -99.)):
-        lh_ri = np.exp(-(ricol-(mod['rmag'][um]-mod['imag'][um]))**2./(2.*ricole**2.))
+        lh_ri = -(ricol-(mod['rmag'][um]-mod['imag'][um]))**2./(2.*ricole**2.)
     else:
-        lh_ri = np.ones(len(um)) 
-        
+        lh_ri = np.zeros(len(um))
+
     if ((input.imag > -99.) & (input.zmag > -99.)):
-        lh_iz = np.exp(-(izcol-(mod['imag'][um]-mod['zmag'][um]))**2./(2.*izcole**2.))
+        lh_iz = -(izcol-(mod['imag'][um]-mod['zmag'][um]))**2./(2.*izcole**2.)
     else:
-        lh_iz = np.ones(len(um)) 
-   
+        lh_iz = np.zeros(len(um))
+
     if ((input.jmag > -99.) & (input.hmag > -99.)):
-        lh_jh = np.exp(-(jhcol-(mod['jmag'][um]-mod['hmag'][um]))**2./(2.*jhcole**2.))
+        lh_jh = -(jhcol-(mod['jmag'][um]-mod['hmag'][um]))**2./(2.*jhcole**2.)
     else:
-        lh_jh = np.ones(len(um))
+        lh_jh = np.zeros(len(um))
 
     if ((input.hmag > -99.) & (input.kmag > -99.)):
-        lh_hk = np.exp(-(hkcol-(mod['hmag'][um]-mod['kmag'][um]))**2./(2.*hkcole**2.))
+        lh_hk = -(hkcol-(mod['hmag'][um]-mod['kmag'][um]))**2./(2.*hkcole**2.)
     else:
-        lh_hk = np.ones(len(um))   
+        lh_hk = np.zeros(len(um))
 
     if ((input.bmag > -99.) & (input.vmag > -99.)):
-        lh_bv = np.exp(-(bvcol-(mod['bmag'][um]-mod['vmag'][um]))**2./(2.*bvcole**2.))
+        lh_bv = -(bvcol-(mod['bmag'][um]-mod['vmag'][um]))**2./(2.*bvcole**2.)
     else:
-        lh_bv = np.ones(len(um))  
+        lh_bv = np.zeros(len(um))
 
     if ((input.btmag > -99.) & (input.vtmag > -99.)):
-        lh_bvt = np.exp(-(bvtcol-(mod['btmag'][um]-mod['vtmag'][um]))**2./(2.*bvtcole**2.))
+        lh_bvt = -(bvtcol-(mod['btmag'][um]-mod['vtmag'][um]))**2./(2.*bvtcole**2.)
     else:
-        lh_bvt = np.ones(len(um))   
+        lh_bvt = np.zeros(len(um))
 
     if (input.teff > -99):
-        lh_teff = np.exp(-(input.teff-mod['teff'][um])**2./(2.*input.teffe**2.))
+        lh_teff = -(input.teff-mod['teff'][um])**2./(2.*input.teffe**2.)
     else:
-        lh_teff = np.ones(len(um))
+        lh_teff = np.zeros(len(um))
 
     if (input.logg > -99.):
-        lh_logg = np.exp(-(input.logg-mod['logg'][um])**2./(2.*input.logge**2.))
+        lh_logg = -(input.logg-mod['logg'][um])**2./(2.*input.logge**2.)
     else:
-        lh_logg = np.ones(len(um))
+        lh_logg = np.zeros(len(um))
 
     if (input.feh > -99.):
-        lh_feh = np.exp(-(input.feh-mod['feh'][um])**2./(2.*input.fehe**2.))
+        lh_feh = -(input.feh-mod['feh'][um])**2./(2.*input.fehe**2.)
     else:
-        lh_feh = np.ones(len(um))
+        lh_feh = np.zeros(len(um))
 
     if (input.plx > -99.):
-        lh_mabs = np.exp( (-1./(2.*input.plxe**2))*(input.plx-1./mod['dis'][um])**2)
+        lh_mabs = -(-1./(2.*input.plxe**2))*(input.plx-1./mod['dis'][um])**2
 
         #if (input.plxe/input.plx < 0.1):
         #    lh_mabs = np.exp( -(mabs-mod_mabs[um])**2. / (2.*mabse**2.))
@@ -447,51 +484,60 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
         #    dv=mod_mabs[um]-mabs
         #    lh_mabs = 10**(0.2*dv) * np.exp(-((10**(0.2*dv)-1.)**2)/(2.*(input.plxe/input.plx)**2))
     else:
-        lh_mabs = np.ones(len(um))
+        lh_mabs = np.zeros(len(um))
 
     if (input.dnu > 0.):
         mod_dnu = dnusun*mod['fdnu']*np.sqrt(10**mod['rho'])
-        lh_dnu = np.exp( -(input.dnu-mod_dnu[um])**2. / (2.*input.dnue**2.))
+        lh_dnu = -(input.dnu-mod_dnu[um])**2. / (2.*input.dnue**2.)
     else:
-        lh_dnu = np.ones(len(um))
+        lh_dnu = np.zeros(len(um))
 
     if (input.numax > 0.):
         mod_numax = numaxsun*(10**mod['logg']/gsun)*(mod['teff']/teffsun)**(-0.5)
-        lh_numax = np.exp( -(input.numax-mod_numax[um])**2. / (2.*input.numaxe**2.))
+        lh_numax = -(input.numax-mod_numax[um])**2. / (2.*input.numaxe**2.)
     else:
-        lh_numax = np.ones(len(um))
+        lh_numax = np.zeros(len(um))
 
-    tlh = lh_gr*lh_ri*lh_iz*lh_jh*lh_hk*lh_bv*lh_bvt*lh_teff*lh_logg*lh_feh*lh_mabs*lh_dnu*lh_numax
+    #tlh = lh_gr*lh_ri*lh_iz*lh_jh*lh_hk*lh_bv*lh_bvt*lh_teff*lh_logg*lh_feh*lh_mabs*lh_dnu*lh_numax
+    tllh = np.sum([lh_gr,lh_ri,lh_iz,lh_jh,lh_hk,lh_bv,lh_bvt,lh_teff,lh_logg,lh_feh,lh_mabs,lh_dnu,lh_numax])
     #pdb.set_trace()
-        
+
     # metallicity prior (only if no FeH input is given)
     if (input.feh > -99.):
-        fprior = np.ones(len(um))
+        fprior = np.zeros(len(um))
     else:
-        fprior = fehprior(mod['feh'][um])
-    
+        fprior = np.log(fehprior(mod['feh'][um]))
+
     # distance prior
     if (input.plx > -99.):
         lscale = 1350.
-        dprior = (mod['dis'][um]**2/(2.*lscale**3.))*np.exp(-mod['dis'][um]/lscale)
+        dprior = np.log((mod['dis'][um]**2/(2.*lscale**3.)))-mod['dis'][um]/lscale
     else:
-        dprior = np.ones(len(um))
+        dprior = np.zeros(len(um))
 
     # isochrone prior (weights)
-    tprior = mod['dage'][um]*mod['dmass'][um]*mod['dfeh'][um]
+    tprior = np.log(mod['dage'][um])+np.log(mod['dmass'][um])+np.log(mod['dfeh'][um])
 
     # posterior
-    prob = fprior*dprior*tprior*tlh
-    prob = prob/np.sum(prob)
-    #pdb.set_trace()
-    
+    logprob = fprior+dprior+tprior+tllh
+    medprob=np.nanmedian(logprob)
+    print("maxprob:",medprob)
+    #summing is a problem in logspace... Doing the log1p trick and using the maximum prob as the pivot
+    sumprob=medprob+np.log1p(np.sum(np.exp(logprob-medprob)))
+    print("sumprob:",sumprob)
+    logprob = logprob-sumprob#pdb.set_trace()
+    #clipping because of overflows :/
+    print("maxprob:",np.nanmedian(logprob))
+    logprob=np.clip(logprob,-700,700)
+
+
     if (dustmodel == 0):
 
         names=['teff','logg','feh','rad','mass','rho','lum','age']
         steps=[0.001,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
         fixes=[0,1,1,0,0,1,1,0,1]
         #pdb.set_trace()
-        
+
         if (map > -99.):
             names=['teff','logg','feh','rad','mass','rho','lum','age','avs']
             steps=[0.001,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
@@ -501,14 +547,14 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
             names=['teff','logg','feh','rad','mass','rho','lum','age','avs','dis']
             steps=[0.001,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
             fixes=[0,1,1,0,0,1,1,0,1,0]
-            
+
         if ((input.plx == -99.) & (map > -99) & (useav > -99.)):
             names=['teff','logg','feh','rad','mass','rho','lum','age','dis']
             steps=[0.001,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
             fixes=[0,1,1,0,0,1,1,0,0]
-            
-        
-            
+
+
+
     else:
         #names=['teff','logg','feh','rad','mass','rho','lum','age']
         #steps=[0.001,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
@@ -523,53 +569,58 @@ def classify(input,model,dustmodel=0,doplot=1,useav=-99.):
         fixes=[0,1,1,0,0,1,1,0,1,0]
 
     #pdb.set_trace()
-                           
+
     if doplot:
-            plotinit()
+        fig_post,fig_hrd=plotinit()
+    else:
+        fig_post,fig_hrd=None,None
 
     ix=1
     iy=2
     npar=len(names)
-   
-    for j in range(0,npar):
 
-            if fnmatch.fnmatch(names[j],'*lum*'):
-                lum=np.log10((mod['rad'][um]**2. * (mod['teff'][um]/5777.)**4.))
-                x,y,res,err1,err2 = getpdf(lum,prob,name=names[j],\
-                                           step=steps[j],fixed=fixes[j],dustmodel=dustmodel)
+    for j in range(0,npar):
+            if j>=3 and np.isnan(result.teff):
+                print("Failed as ",result.teff)
+                #Failed:
+                res=0.;err1=0.;err2=0.
             else:
-                if (len(np.unique(mod[names[j]][um])) > 1):
-                    x,y,res,err1,err2 = getpdf(mod[names[j]][um],prob,name=names[j],\
+                if fnmatch.fnmatch(names[j],'*lum*'):
+                    lum=np.log10((mod['rad'][um]**2. * (mod['teff'][um]/5777.)**4.))
+                    x,y,res,err1,err2 = getpdf(lum,np.exp(logprob),name=names[j],\
                                                step=steps[j],fixed=fixes[j],dustmodel=dustmodel)
                 else:
-                    res=0.
-                    err1=0.
-                    err2=0.
+                    if (len(np.unique(mod[names[j]][um])) > 1):
+                        x,y,res,err1,err2 = getpdf(mod[names[j]][um],np.exp(logprob),name=names[j],\
+                                                   step=steps[j],fixed=fixes[j],dustmodel=dustmodel)
+                    else:
+                        res=0.;err1=0.;err2=0.
 
-            print names[j],res,err1,err2
+            print(names[j],res,err1,err2)
             setattr(result, names[j], res)
             setattr(result, names[j]+'ep', err1)
             setattr(result, names[j]+'em', err2)
             setattr(result, names[j]+'px', x)
             setattr(result, names[j]+'py', y)
 
-            if doplot:
+            if fig_post is not None and result.teff/result.teff==1.0:
                     #plotposterior(x,y,res,err1,err2,0.,model,model,names,j,0.,\
                     #              0.,grcol,ricol,grcole,ricole,mabs,mabse,ix,iy)
-                    plotposterior(x,y,res,err1,err2,names,j,ix,iy)
+                    #print("plotting posterior",result.teff)
+                    fig_post=plotposterior(x,y,res,err1,err2,names,j,ix,iy,fig_post)
                     ix=ix+2
                     iy=iy+2
 
-    if doplot:
+    if fig_hrd is not None and result.teff/result.teff==1.0:
+            print("plotting hrd",result.teff)
+            #plt.figure(15,8)
 #            plothrd(x,y,res,err1,err2,0.,model,model,names,j,0.,0.,grcol,ricol,grcole,\
 #                     ricole,0.,0.,ix,iy)
-            plothrd(model,input,mabs,mabse,ix,iy)
-
-            plotclear()
-
+            fig_hrd=plothrd(model,input,mabs,mabse,ix,iy,fig_hrd)
     #pdb.set_trace()
-    return result
-            
+    figs=[fig_hrd,fig_post]
+    return result,logprob,figs
+
     #if i==300:
     #pdb.set_trace()
 
@@ -592,11 +643,11 @@ def reddening(model,um,avs,extfactors):
     start=0
     end=len(um)
 
-    #print start,end
+    #print(start,end)
     for i in range(0,len(avs)):
             ix=np.arange(start,end,1)
 
-            # NB: in reality, the model mags should also be Av-dependent; hopefully a 
+            # NB: in reality, the model mags should also be Av-dependent; hopefully a
             # small effect!
             model3['bmag'][ix]=model2['bmag']+avs[i]*extfactors.ab
             model3['vmag'][ix]=model2['vmag']+avs[i]*extfactors.av
@@ -643,70 +694,70 @@ def reddening_map(model,model_mabs,map,ext,dustmodel,um,input,extfactors):
     # iterate distance and map a few times
     for i in range(0,1):
         ext_v = 3.1*dustmodel(lon_deg,lat_deg,dis/1000.)
-        ext_band = ext_v*ext	
+        ext_band = ext_v*ext
         dis=10**((map-ext_band-model_mabs[um]+5)/5.)
-  
-    
-    # if no models have been pre-selected (i.e. input is photometry+parallax only), 
+
+
+    # if no models have been pre-selected (i.e. input is photometry+parallax only),
     # redden all models
     if (len(um) == len(model['teff'])):
-	    model3 = copy.deepcopy(model)
-	    model3['bmag']=model['bmag']+ext_v*extfactors.ab
-	    model3['vmag']=model['vmag']+ext_v*extfactors.av
-	    model3['gmag']=model['gmag']+ext_v*extfactors.ag
-	    model3['rmag']=model['rmag']+ext_v*extfactors.ar
-	    model3['imag']=model['imag']+ext_v*extfactors.ai
-	    model3['zmag']=model['zmag']+ext_v*extfactors.az
-	    #model3['d51mag']=model['d51mag']+ext_v*ab
-	    model3['jmag']=model['jmag']+ext_v*extfactors.aj
-	    model3['hmag']=model['hmag']+ext_v*extfactors.ah
-	    model3['kmag']=model['kmag']+ext_v*extfactors.ak
-	    model3['btmag']=model['btmag']+ext_v*extfactors.abt
-	    model3['vtmag']=model['vtmag']+ext_v*extfactors.avt
-	    model3['dis']=dis
-	    model3['avs']=ext_v
-	    #pdb.set_trace()
-	 
+            model3 = copy.deepcopy(model)
+            model3['bmag']=model['bmag']+ext_v*extfactors.ab
+            model3['vmag']=model['vmag']+ext_v*extfactors.av
+            model3['gmag']=model['gmag']+ext_v*extfactors.ag
+            model3['rmag']=model['rmag']+ext_v*extfactors.ar
+            model3['imag']=model['imag']+ext_v*extfactors.ai
+            model3['zmag']=model['zmag']+ext_v*extfactors.az
+            #model3['d51mag']=model['d51mag']+ext_v*ab
+            model3['jmag']=model['jmag']+ext_v*extfactors.aj
+            model3['hmag']=model['hmag']+ext_v*extfactors.ah
+            model3['kmag']=model['kmag']+ext_v*extfactors.ak
+            model3['btmag']=model['btmag']+ext_v*extfactors.abt
+            model3['vtmag']=model['vtmag']+ext_v*extfactors.avt
+            model3['dis']=dis
+            model3['avs']=ext_v
+            #pdb.set_trace()
+
     # if models have been pre-selected, extract and only redden those
     else:
-	    model2=dict((k, model[k][um]) for k in model.keys())
-	    nmodels=len(model2['teff'])
-	    model3=np.zeros(nmodels,dtype=[('dage', float), ('dmass', float), ('dfeh', float), \
-        	    ('teff', float), ('logg', float), ('feh', float), \
-        	    ('rad', float), ('mass', float), ('rho', float), ('age', float), \
-        	    ('gmag', float), ('rmag', float), ('imag', float), \
-        	    ('zmag', float), ('jmag', float), ('hmag', float), \
-        	    ('bmag', float), ('vmag', float), ('btmag', float), ('vtmag', float), ('dis', float), \
-        	    ('kmag', float), ('avs', float), ('fdnu', float)])
+            model2=dict((k, model[k][um]) for k in model.keys())
+            nmodels=len(model2['teff'])
+            model3=np.zeros(nmodels,dtype=[('dage', float), ('dmass', float), ('dfeh', float), \
+                    ('teff', float), ('logg', float), ('feh', float), \
+                    ('rad', float), ('mass', float), ('rho', float), ('age', float), \
+                    ('gmag', float), ('rmag', float), ('imag', float), \
+                    ('zmag', float), ('jmag', float), ('hmag', float), \
+                    ('bmag', float), ('vmag', float), ('btmag', float), ('vtmag', float), ('dis', float), \
+                    ('kmag', float), ('avs', float), ('fdnu', float)])
 
-	    model3['bmag']=model2['bmag']+ext_v*extfactors.ab
-	    model3['vmag']=model2['vmag']+ext_v*extfactors.av
-	    model3['gmag']=model2['gmag']+ext_v*extfactors.ag
-	    model3['rmag']=model2['rmag']+ext_v*extfactors.ar
-	    model3['imag']=model2['imag']+ext_v*extfactors.ai
-	    model3['zmag']=model2['zmag']+ext_v*extfactors.az
-	    #model3['d51mag']=model2['d51mag']+ext_v*ab
-	    model3['jmag']=model2['jmag']+ext_v*extfactors.aj
-	    model3['hmag']=model2['hmag']+ext_v*extfactors.ah
-	    model3['kmag']=model2['kmag']+ext_v*extfactors.ak
-	    model3['btmag']=model2['btmag']+ext_v*extfactors.abt
-	    model3['vtmag']=model2['vtmag']+ext_v*extfactors.avt
-	    model3['dis']=dis
-	    model3['avs']=ext_v
+            model3['bmag']=model2['bmag']+ext_v*extfactors.ab
+            model3['vmag']=model2['vmag']+ext_v*extfactors.av
+            model3['gmag']=model2['gmag']+ext_v*extfactors.ag
+            model3['rmag']=model2['rmag']+ext_v*extfactors.ar
+            model3['imag']=model2['imag']+ext_v*extfactors.ai
+            model3['zmag']=model2['zmag']+ext_v*extfactors.az
+            #model3['d51mag']=model2['d51mag']+ext_v*ab
+            model3['jmag']=model2['jmag']+ext_v*extfactors.aj
+            model3['hmag']=model2['hmag']+ext_v*extfactors.ah
+            model3['kmag']=model2['kmag']+ext_v*extfactors.ak
+            model3['btmag']=model2['btmag']+ext_v*extfactors.abt
+            model3['vtmag']=model2['vtmag']+ext_v*extfactors.avt
+            model3['dis']=dis
+            model3['avs']=ext_v
 
-	    model3['teff']=model2['teff']
-	    model3['logg']=model2['logg']
-	    model3['feh']=model2['feh']
-	    model3['rad']=model2['rad']
-	    model3['mass']=model2['mass']
-	    model3['rho']=model2['rho']
-	    model3['age']=model2['age']
-	    model3['dfeh']=model2['dfeh']
-	    model3['dmass']=model2['dmass']
-	    model3['dage']=model2['dage']
-	    model3['fdnu']=model2['fdnu']
+            model3['teff']=model2['teff']
+            model3['logg']=model2['logg']
+            model3['feh']=model2['feh']
+            model3['rad']=model2['rad']
+            model3['mass']=model2['mass']
+            model3['rho']=model2['rho']
+            model3['age']=model2['age']
+            model3['dfeh']=model2['dfeh']
+            model3['dmass']=model2['dmass']
+            model3['dage']=model2['dage']
+            model3['fdnu']=model2['fdnu']
             #pdb.set_trace()
-       
+
     return model3
 
 
@@ -733,7 +784,7 @@ def redden(map,mabs,gl,gb,dust):
 
         logd = (map-mabs+5.)/5.
         newd = logd
-        
+
         for i in range(0,1):
                 cur = 10**newd
                 ebv = dust(gl,gb,cur/1000.)
@@ -744,7 +795,7 @@ def redden(map,mabs,gl,gb,dust):
         s_newd = np.sqrt( (0.2*0.01)**2 + (0.2*0.03)**2 + (0.2*0.02)**2 )
         plx=1./(10**newd)
         s_plx=10**(-newd)*np.log(10)*s_newd
-        pdb.set_trace()
+        #pdb.set_trace()
 
         return 1./(10**newd)
 
